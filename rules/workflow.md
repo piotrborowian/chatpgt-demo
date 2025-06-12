@@ -3,6 +3,8 @@
 > **Purpose**  Repeatable, *research‑first* workflow for autonomous coding sessions run with Claude Code CLI or Cursor Agent Mode.
 > Reference from `CLAUDE.md` and `.cursor/rules`.
 
+> **⚠️ CRITICAL: NO FEATURE/ISSUE IS COMPLETE WITHOUT ALL 7 WORKFLOW STAGES (2.1-2.7)**
+
 ---
 
 ## 0 Key Ideas at a Glance
@@ -21,6 +23,17 @@
 4. **Ask for Confirmation at Checkpoints**.
 5. **Isolate Work with Git Flow**.
 6. **Scale Compute** – *think hard* → *harder* → *ultrahard*.
+
+---
+
+## 1.1 Workflow Summary
+1. **2.1 Session Boot** - Branch & setup session log
+2. **2.2 Research + Planning** - Research, plan, design tests → **IMPORTANT!!! STOP - Get User Approval**  
+3. **2.3 Test Design** - Create loop-closing tests
+4. **2.4 Implementation** - TDD iteration (RED → GREEN → REFACTOR)
+5. **2.5 Validation** - Run CI, QA tests, present evidence → **IMPORTANT!!! STOP - Get User Approval**
+6. **2.6 Documentation & PR** - Create issue, commit, open PR
+7. **2.7 Close Session** - Update plan, archive session
 
 ---
 
@@ -75,7 +88,7 @@ repeat ↻
 ### 2.5 Validation  (Gate 2)
 1. Run **complete** CI suite & linters.
 2. Execute manual QA script from `working_session.md`.
-3. Present evidence (test log, screenshots) → wait for user sign‑off.
+3. Present evidence to the user that the feature works correctly (test logs, screenshots, demo) → wait for user sign‑off.
 
 ### 2.6 Documentation & Pull Request
 1. **Create GitHub Issue & Capture Number**
@@ -112,11 +125,10 @@ repeat ↻
 ---
 
 ## 3 Definition of Done
-- ✅ All loop‑closing tests pass & no regressions.
+- ✅ All tests pass & no regressions.
 - ✅ Manual QA approved by user.
 - ✅ Docs & issue updated.
 - ✅ PR open with reviewers.
-- ✅ CI green on develop.
 
 ---
 

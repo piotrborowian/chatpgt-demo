@@ -5,6 +5,12 @@
 
 This project follows the Agent Development Workflow for autonomous coding sessions. All development work must adhere to the research-first, test-driven approach outlined in the workflow document.
 
+### Workflow Reminder
+**⚠️ CRITICAL: NO FEATURE/ISSUE IS COMPLETE WITHOUT ALL 7 WORKFLOW STAGES (2.1-2.7)**
+
+**Quick Summary:**
+1. Session Boot → 2. Research + Planning (**STOP - Get User Approval**) → 3. Test Design → 4. Implementation → 5. Validation (**STOP - Get User Approval**) → 6. Documentation & PR → 7. Close Session
+
 ## Project Information
 
 ### Tech Stack
