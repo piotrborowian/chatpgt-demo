@@ -29,9 +29,9 @@
 ### 2.1 Session Boot
 ```bash
 # Pick next task
+git checkout develop && git pull
 open tasks/implementation_plan.md
 # Sync & branch
-git checkout develop && git pull
 git checkout -b feature/issue-<n>-<slug> && git push -u origin HEAD
 # Start log
 touch tasks/working_session.md
