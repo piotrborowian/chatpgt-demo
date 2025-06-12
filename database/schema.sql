@@ -15,12 +15,14 @@ create table public.messages (
   conversation_id uuid references public.conversations(id) on delete cascade not null,
   role text not null check (role in ('user', 'assistant')),
   content text not null,
+  message_order integer not null,
   created_at timestamptz default now() not null
 );
 
 -- Create indexes for better query performance
 create index messages_conversation_id_idx on public.messages(conversation_id);
 create index messages_created_at_idx on public.messages(created_at);
+create index messages_conversation_order_idx on public.messages(conversation_id, message_order);
 create index conversations_updated_at_idx on public.conversations(updated_at);
 
 -- Enable Row Level Security (RLS) for tables

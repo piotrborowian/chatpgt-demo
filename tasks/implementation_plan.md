@@ -12,7 +12,7 @@ Building a modern web-based ChatGPT clone with conversation history, using Next.
   - Configure environment variables and API connections
   - Set up basic project structure
 
-- [ ] **Issue #2: Database Schema Design (No Auth)**
+- [x] **Issue #2: Database Schema Design (No Auth)** ✅ COMPLETED
   - Design Supabase tables for conversations and messages
   - Create database migrations without user constraints
   - Configure public access policies for development
