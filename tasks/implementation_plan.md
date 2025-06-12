@@ -6,7 +6,7 @@ Building a modern web-based ChatGPT clone with conversation history, using Next.
 ## Feature Breakdown
 
 ### Phase 1: Core Infrastructure & Setup
-- [ ] **Issue #1: Project Setup & Dependencies**
+- [x] **Issue #1: Project Setup & Dependencies** ✅ COMPLETED
   - Initialize Next.js project with TypeScript
   - Install required dependencies (OpenAI SDK, Supabase client, UI components)
   - Configure environment variables and API connections

@@ -78,21 +78,31 @@ repeat ↻
 3. Present evidence (test log, screenshots) → wait for user sign‑off.
 
 ### 2.6 Documentation & Pull Request
-1. **Create / Update GitHub Issue**
+1. **Create GitHub Issue & Capture Number**
    ```bash
-   gh issue create -t "Feature #<n>: <title>" -b "$(cat tasks/issue<n>.md)" --label enhancement
+   # Create issue and extract the issue number
+   ISSUE_URL=$(gh issue create -t "Feature: <title>" -b "$(cat tasks/issue<n>.md)" --label enhancement)
+   ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -o '[0-9]*$')
+   echo "Created GitHub Issue #$ISSUE_NUMBER"
    ```
 2. **Prepare Commit Message & Push**
    ```bash
    git add .
-   git commit -m "feat: <description> (#<n>)"
+   # Use the actual GitHub issue number in commit message
+   git commit -m "feat: <description> (closes #$ISSUE_NUMBER)"
    git push
    ```
 3. **Open Pull Request**
    ```bash
-   gh pr create --base develop --head feature/issue-<n>-<slug> -t "Feature #<n>: <title>" -b "Closes #<n>"
+   # Reference the actual GitHub issue number
+   gh pr create --base develop --head feature/issue-<n>-<slug> -t "Feature: <title>" -b "Closes #$ISSUE_NUMBER"
    ```
 4. Link CI status & screenshots; wait for review.
+
+**Important Notes:**
+- Always use the actual GitHub issue number (not internal task number) in commits and PRs
+- The commit message with "closes #<number>" will automatically close the issue when merged
+- Extract and use the issue number from the GitHub API response
 
 ### 2.7 Close Session
 * Check off task in `implementation_plan.md`.
