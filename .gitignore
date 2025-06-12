@@ -119,4 +119,8 @@ temp/
 *.ntvs*
 *.njsproj
 *.sln
-*.sw? 
+*.sw?
+
+# MCP config files with sensitive tokens
+.mcp.json
+.cursor/mcp.json 
