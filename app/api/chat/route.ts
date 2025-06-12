@@ -1,81 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { getMessages } from '../../../lib/database';
-import { logger } from '../../../lib/logger';
+import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
+import { supabase } from '@/lib/supabase'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+})
 
 export async function POST(request: NextRequest) {
-  logger.info('Chat API called');
-  
   try {
-    const { message, conversationId } = await request.json();
-    logger.info('Request data received', { message: message?.substring(0, 100), conversationId });
+    const { message, conversationId } = await request.json()
 
     if (!message) {
-      logger.warn('No message provided in request');
       return NextResponse.json(
         { error: 'Message is required' },
         { status: 400 }
-      );
+      )
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      )
     }
 
     // Get conversation history if conversationId is provided
-    let conversationHistory: any[] = [];
+    let conversationHistory: Array<{ role: 'user' | 'assistant', content: string }> = []
+    
     if (conversationId) {
-      logger.info('Fetching conversation history', { conversationId });
-      try {
-        const messages = await getMessages(conversationId);
-        conversationHistory = messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
-        logger.info('Conversation history loaded', { messageCount: conversationHistory.length });
-      } catch (error) {
-        logger.error('Error fetching conversation history', { error, conversationId });
-        // Continue without history if there's an error
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('role, content')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching conversation history:', error)
+      } else {
+        conversationHistory = messages || []
       }
-    } else {
-      logger.info('No conversation ID provided, starting fresh conversation');
     }
 
-    // Build messages array for OpenAI
-    const messages = [
-      ...conversationHistory,
-      {
-        role: 'user' as const,
-        content: message,
-      },
-    ];
-    logger.info('Sending request to OpenAI', { messageCount: messages.length });
+    // Add the new user message to the conversation history
+    conversationHistory.push({ role: 'user', content: message })
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages,
+      messages: conversationHistory,
       max_tokens: 1000,
       temperature: 0.7,
-    });
+    })
 
-    const response = completion.choices[0]?.message?.content || 'No response generated';
-    logger.info('OpenAI response received', { responseLength: response.length });
+    const responseMessage = completion.choices[0]?.message?.content || 'No response received'
 
-    return NextResponse.json({ response });
+    return NextResponse.json({ 
+      message: responseMessage,
+      conversationId: conversationId 
+    })
   } catch (error) {
-    logger.error('Chat API error', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : error,
-      errorType: typeof error,
-      errorConstructor: error?.constructor?.name
-    });
-    
+    console.error('OpenAI API error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate response', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to generate response' },
       { status: 500 }
-    );
+    )
   }
 } 

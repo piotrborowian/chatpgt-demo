@@ -1,12 +1,13 @@
+import React from 'react'
+import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'ChatGPT Clone',
-  description: 'A ChatGPT-like interface using GPT-4o',
+  description: 'A clone of ChatGPT built with Next.js and OpenAI API',
 }
 
 export default function RootLayout({
@@ -16,9 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {children}
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 } 

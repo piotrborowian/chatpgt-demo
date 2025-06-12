@@ -1,0 +1,9 @@
+Now, I'd like you to add conversation history.
+I want to persist conversations in the supabase database so that every chat preserves its context.
+
+The .env.local contains 2 supabase keys:
+NEXT_PUBLIC_SUPABASE_URL and 
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+You also have acces to a supabase MCP server. Please use it. 
+I created a supabase chat-gpt-demo project that you should use. 

@@ -1,53 +1,70 @@
 # ChatGPT Clone
 
-A ChatGPT-like web interface that uses the OpenAI GPT-4o model to generate responses.
+A modern ChatGPT clone built with Next.js 14, TypeScript, and the OpenAI API.
 
 ## Features
 
-- Clean, modern UI that mimics ChatGPT's interface
+- Clean, modern ChatGPT-like interface
 - Real-time chat with GPT-4o model
-- Responsive design
-- Loading states and error handling
-- No chat history persistence (as requested)
+- Responsive design with Tailwind CSS
+- TypeScript for better development experience
 
 ## Setup
 
-1. **Install dependencies:**
+1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-2. **Set up your OpenAI API key:**
-   - Make sure you have your OpenAI API key in the `.env.local` file
-   - The key should be stored as: `OPENAI_API_KEY=your_actual_api_key_here`
+2. **Set up environment variables**:
+   Create a `.env.local` file in the root directory and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-3. **Run the development server:**
+3. **Run the development server**:
    ```bash
    npm run dev
    ```
 
-4. **Open your browser:**
-   - Navigate to [http://localhost:3000](http://localhost:3000)
-   - Start chatting with the AI!
+4. **Open your browser** and navigate to `http://localhost:3000`
+
+## Usage
+
+- Type your message in the input field at the bottom
+- Press Enter or click the send button to send your message
+- Wait for GPT-4o to respond
+- Continue the conversation as needed
+
+## Requirements
+
+- Node.js 18 or later
+- An OpenAI API key (get one at https://platform.openai.com/api-keys)
+
+## Tech Stack
+
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **AI Model**: OpenAI GPT-4o
+- **Icons**: Lucide React
 
 ## Project Structure
 
-- `app/page.tsx` - Main page component
-- `app/layout.tsx` - Root layout
-- `app/components/ChatInterface.tsx` - Main chat interface component
-- `app/api/chat/route.ts` - API route for OpenAI integration
-- `app/globals.css` - Global styles
+```
+├── app/
+│   ├── api/
+│   │   └── chat/
+│   │       └── route.ts      # API endpoint for chat
+│   ├── globals.css           # Global styles
+│   ├── layout.tsx            # Root layout
+│   └── page.tsx              # Main chat interface
+├── package.json
+├── tailwind.config.js
+├── tsconfig.json
+└── README.md
+```
 
-## Technologies Used
+## Note
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- OpenAI API (GPT-4o)
-- Lucide React (for icons)
-
-## Notes
-
-- This implementation doesn't store chat history
-- Each message is sent independently to the API
-- The interface closely mimics ChatGPT's design and user experience 
+This is a simple implementation without chat history persistence. Each page refresh will start a new conversation. 
