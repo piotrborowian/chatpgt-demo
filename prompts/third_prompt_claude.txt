@@ -1,0 +1,28 @@
+Below is the description of a website I want to build. 
+For this project, we'll follow the workflow described in rules/workflow.md
+Please read that file to familiarize yourself with our workflow.
+
+Your task this session will be to
+1. Think hard and create the tasks/implementation_plan for the project. 
+The implementation plan should be broken down into features suitable for the workflow.
+
+2. Create docs/architecture.md file that describes the architecture/config of our system, as per the workflow description.
+
+3. Create a CLAUDE.md file that references the workflow with @ sign as MUST FOLLOW.
+
+----- Product description -----
+I want to build a clone of the ChatGPT web client.
+The website should have a modern slick user interface where the user can chat with the GPT-4o model from Open AI.
+The website should support conversation history, where the user can create a new conversation, or choose to return
+to the previous conversation. 
+A conversation, of course, should preserve its context accross the duration of the conversation.
+Use OpenAI API and Supabase (project chat-gpt-demo) for storage in your implementation
+
+I prepared a .env.local file with the following keys:
+
+OPENAI_API_KEY 
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+The .cursor/mcp.json contains a supabase MCP server definition that you should use to access supabase to create tables etc.
+Install the server in any way you need, if it's not already installed.

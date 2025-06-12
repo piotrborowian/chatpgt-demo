@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ALWAYS follow the agentic workflow described in
+[workflow.md](mdc:rules/workflow.md)
+if tasks/implementation.md file is present.
+
