@@ -1,4 +1,5 @@
 I want to build a clone of the ChatGPT website. 
 I want a chat interface where we invoke the GPT-4o model.
 For now, let's not implement any chat history, just a simple call to GPT-4o.
-For Open AI API access, use OPENAI_API_KEY in .env.local
+For Open AI API access, use OPENAI_API_KEY in .env.local.
+I have already created the file with the key configured.
