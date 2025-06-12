@@ -11,6 +11,11 @@ This project follows the Agent Development Workflow for autonomous coding sessio
 **Quick Summary:**
 1. Session Boot → 2. Research + Planning (**STOP - Get User Approval**) → 3. Test Design → 4. Implementation → 5. Validation (**STOP - Get User Approval**) → 6. Documentation & PR → 7. Close Session
 
+**Git Setup**: Ensure `develop` branch tracks `origin/develop`:
+```bash
+git branch --set-upstream-to=origin/develop develop
+```
+
 ## Project Information
 
 ### Tech Stack
