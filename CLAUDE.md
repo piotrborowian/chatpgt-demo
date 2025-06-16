@@ -9,7 +9,7 @@ This project follows the Agent Development Workflow for autonomous coding sessio
 **⚠️ CRITICAL: NO FEATURE/ISSUE IS COMPLETE WITHOUT ALL 7 WORKFLOW STAGES (2.1-2.7)**
 
 **Quick Summary:**
-1. Session Boot → 2. Research + Planning (**STOP - Get User Approval**) → 3. Test Design → 4. Implementation → 5. Validation (**STOP - Get User Approval**) → 6. Documentation & PR → 7. Close Session
+1. Session Boot → 2. Research + Planning (**STOP - Get User Approval**) → 3. Test Design & Implementation (**STOP - never start implementation before the tests are created**) → 4. Implementation → 5. Validation (**STOP - Get User Approval**) → 6. Documentation & PR → 7. Close Session
 
 **Git Setup**: Ensure `develop` branch tracks `origin/develop`:
 ```bash

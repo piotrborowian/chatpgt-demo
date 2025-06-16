@@ -123,4 +123,5 @@ temp/
 
 # MCP config files with sensitive tokens
 .mcp.json
-.cursor/mcp.json 
+.cursor/mcp.json
+mcp.json 
