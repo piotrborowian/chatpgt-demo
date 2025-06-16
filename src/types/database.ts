@@ -22,5 +22,4 @@ export interface CreateMessageParams {
   conversation_id: string
   role: 'user' | 'assistant'
   content: string
-  message_order: number
 }

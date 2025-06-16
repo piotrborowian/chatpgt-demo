@@ -5,7 +5,7 @@ import { MessageList } from './MessageList'
 import { MessageInput } from './MessageInput'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { Message as MessageType, Conversation } from '@/types/database'
-import { createMessage, createConversation } from '@/lib/database'
+import { createMessage, createConversation, getMessages } from '@/lib/database'
 import { sanitizeUserInput } from '@/lib/sanitize'
 
 interface ChatInterfaceProps {
@@ -32,8 +32,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     if (conversationId) {
       setCurrentConversationId(conversationId)
-      // TODO: Load messages from database for this conversation
-      // This will be implemented when we add the message loading functionality
+      
+      // Load existing messages
+      const loadMessages = async () => {
+        try {
+          const existingMessages = await getMessages(conversationId)
+          if (isMountedRef.current) {
+            setMessages(existingMessages)
+          }
+        } catch (error) {
+          console.error('Failed to load conversation messages:', error)
+        }
+      }
+      
+      loadMessages()
     }
   }, [conversationId])
 
@@ -43,6 +55,123 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       isMountedRef.current = false
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
+  const generateAIResponse = useCallback(async (
+    conversationId: string,
+    userMessage: string,
+    abortController: AbortController,
+    requestId: number
+  ) => {
+    try {
+      // Call streaming API
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          conversationId,
+        }),
+        signal: abortController.signal,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to get AI response')
+      }
+
+      // Check if request was aborted before processing stream
+      if (abortController.signal.aborted || !isMountedRef.current || currentRequestIdRef.current !== requestId) {
+        return
+      }
+
+      // Create assistant message placeholder for streaming
+      const assistantTimestamp = Date.now()
+      const assistantMessageId = `assistant-${requestId}-${assistantTimestamp}`
+      
+      const assistantMessage: MessageType = {
+        id: assistantMessageId,
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString(),
+        message_order: 0, // Will be set properly when saved to database
+      }
+
+      // Add empty assistant message to state
+      if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
+        setMessages(prev => [...prev, assistantMessage])
+      }
+
+      // Process streaming response
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ''
+
+      if (reader) {
+        try {
+          while (true) {
+            // Check for abort before each chunk
+            if (abortController.signal.aborted || !isMountedRef.current || currentRequestIdRef.current !== requestId) {
+              break
+            }
+
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            fullContent += chunk
+
+            // Update message content with streaming text
+            if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              )
+            }
+          }
+        } finally {
+          reader.releaseLock()
+        }
+      }
+
+      // Final check before completing
+      if (abortController.signal.aborted || !isMountedRef.current || currentRequestIdRef.current !== requestId) {
+        return
+      }
+
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        return // Don't handle errors for aborted requests
+      }
+
+      if (isMountedRef.current && currentRequestIdRef.current === requestId) {
+        console.error('Error generating AI response:', error)
+        
+        // Show error message in chat
+        const errorTimestamp = Date.now()
+        const errorMessage: MessageType = {
+          id: `error-${requestId}-${errorTimestamp}`,
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          created_at: new Date().toISOString(),
+          message_order: 0, // Error messages don't need proper ordering
+        }
+        
+        setMessages(prev => [...prev, errorMessage])
+      }
+    } finally {
+      // Clear loading state
+      if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
+        setLoading(false)
       }
     }
   }, [])
@@ -92,7 +221,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         onConversationCreate?.(newConversation)
       }
 
-      // Generate unique message IDs and atomic ordering
+      // Generate unique message IDs 
       const timestamp = Date.now()
       const userMessageId = `user-${requestId}-${timestamp}`
       
@@ -102,7 +231,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         role: 'user',
         content: sanitizedContent,
         created_at: new Date().toISOString(),
-        message_order: timestamp, // Use timestamp for unique ordering
+        message_order: 0, // Will be set properly when saved to database
       }
 
       // Atomic state update - only if component is still mounted and request not aborted
@@ -116,58 +245,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           conversation_id: convId,
           role: 'user',
           content: sanitizedContent,
-          message_order: userMessage.message_order,
         })
       }
 
-      // Simulate AI response with proper cancellation handling
-      const timeoutId = setTimeout(async () => {
-        try {
-          // Check if this is still the current request
-          if (abortController.signal.aborted || !isMountedRef.current || currentRequestIdRef.current !== requestId) {
-            return
-          }
-
-          const assistantTimestamp = Date.now()
-          const assistantMessage: MessageType = {
-            id: `assistant-${requestId}-${assistantTimestamp}`,
-            conversation_id: convId!,
-            role: 'assistant',
-            content: `I received your message: "${sanitizedContent}". This is a placeholder response until OpenAI integration is complete.`,
-            created_at: new Date().toISOString(),
-            message_order: assistantTimestamp,
-          }
-          
-          // Only update state if still mounted and not aborted
-          if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
-            setMessages(prev => [...prev, assistantMessage])
-            
-            // Save assistant message to database
-            await createMessage({
-              conversation_id: convId!,
-              role: 'assistant',
-              content: assistantMessage.content,
-              message_order: assistantMessage.message_order,
-            })
-          }
-        } catch (error) {
-          if (isMountedRef.current && !abortController.signal.aborted) {
-            console.error('Error creating assistant message:', error)
-          }
-        } finally {
-          if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
-            setLoading(false)
-          }
-        }
-      }, 1000)
-
-      // Register timeout for cleanup
-      abortController.signal.addEventListener('abort', () => {
-        clearTimeout(timeoutId)
-        if (isMountedRef.current) {
-          setLoading(false)
-        }
-      })
+      // Generate AI response with streaming
+      await generateAIResponse(convId, sanitizedContent, abortController, requestId)
 
     } catch (error) {
       if (isMountedRef.current && !abortController.signal.aborted) {
@@ -175,7 +257,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setLoading(false)
       }
     }
-  }, [loading, currentConversationId, onConversationCreate])
+  }, [loading, currentConversationId, onConversationCreate, generateAIResponse])
 
   return (
     <div 
