@@ -106,7 +106,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
   }
 }
 
-export async function createMessage(params: CreateMessageParams): Promise<Message> {
+export async function createMessage(params: Omit<CreateMessageParams, 'message_order'>): Promise<Message> {
   try {
     if (!params.conversation_id || typeof params.conversation_id !== 'string') {
       throw new DatabaseError('Conversation ID is required and must be a string')
@@ -117,13 +117,29 @@ export async function createMessage(params: CreateMessageParams): Promise<Messag
     if (!params.content || typeof params.content !== 'string') {
       throw new DatabaseError('Content is required and must be a string')
     }
-    if (params.message_order !== undefined && typeof params.message_order !== 'number') {
-      throw new DatabaseError('Message order must be a number')
+
+    // Get the next message order for this conversation
+    const { data: existingMessages, error: countError } = await supabase
+      .from('messages')
+      .select('message_order')
+      .eq('conversation_id', params.conversation_id)
+      .order('message_order', { ascending: false })
+      .limit(1)
+
+    if (countError) handleDatabaseError(countError)
+    
+    const nextOrder = existingMessages && existingMessages.length > 0 
+      ? existingMessages[0].message_order + 1 
+      : 1
+
+    const messageWithOrder = {
+      ...params,
+      message_order: nextOrder,
     }
 
     const { data, error } = await supabase
       .from('messages')
-      .insert([params])
+      .insert([messageWithOrder])
       .select()
       .single()
 
