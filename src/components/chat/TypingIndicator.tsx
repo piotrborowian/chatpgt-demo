@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { memo } from 'react'
 
 interface TypingIndicatorProps {
   visible: boolean
   message?: string
 }
 
-export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ 
+const TypingIndicatorComponent: React.FC<TypingIndicatorProps> = ({ 
   visible, 
   message = 'Assistant is typing...' 
 }) => {
@@ -41,3 +41,11 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     </div>
   )
 }
+
+// Memoize TypingIndicator component to prevent unnecessary re-renders
+export const TypingIndicator = memo(TypingIndicatorComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.visible === nextProps.visible &&
+    prevProps.message === nextProps.message
+  )
+})

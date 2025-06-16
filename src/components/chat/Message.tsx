@@ -1,6 +1,6 @@
-import React, { memo } from 'react'
+import React, { memo, useMemo } from 'react'
 import { Message as MessageType } from '@/types/database'
-import { escapeHtml } from '@/lib/sanitize'
+import { sanitizeUserInput } from '@/lib/sanitize'
 
 interface MessageProps {
   message: MessageType
@@ -10,6 +10,11 @@ interface MessageProps {
 const MessageComponent: React.FC<MessageProps> = ({ message, showTimestamp = false }) => {
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
+
+  // Sanitize and format message content safely without dangerouslySetInnerHTML
+  const sanitizedContent = useMemo(() => {
+    return sanitizeUserInput(message.content)
+  }, [message.content])
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -33,11 +38,10 @@ const MessageComponent: React.FC<MessageProps> = ({ message, showTimestamp = fal
           {isUser ? 'You' : 'Assistant'}
         </div>
         
-        {/* Message content */}
-        <div 
-          className="text-sm whitespace-pre-wrap"
-          dangerouslySetInnerHTML={{ __html: escapeHtml(message.content) }}
-        />
+        {/* Message content - Safe text rendering without dangerouslySetInnerHTML */}
+        <div className="text-sm whitespace-pre-wrap">
+          {sanitizedContent}
+        </div>
         
         {/* Timestamp */}
         {showTimestamp && (

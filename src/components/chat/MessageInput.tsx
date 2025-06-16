@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, KeyboardEvent } from 'react'
+import React, { useState, KeyboardEvent, useCallback, memo, useMemo } from 'react'
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid'
 import { TextArea } from '@/components/ui/TextArea'
 import { Button } from '@/components/ui/Button'
@@ -12,7 +12,7 @@ interface MessageInputProps {
   placeholder?: string
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({
+const MessageInputComponent: React.FC<MessageInputProps> = ({
   onSend,
   disabled = false,
   loading = false,
@@ -20,30 +20,34 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [message, setMessage] = useState('')
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const trimmedMessage = message.trim()
     if (trimmedMessage && !disabled && !loading) {
       onSend(trimmedMessage)
       setMessage('')
     }
-  }
+  }, [message, disabled, loading, onSend])
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
-  }
+  }, [handleSend])
 
-  const isDisabled = disabled || loading
-  const isEmpty = !message.trim()
+  const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value)
+  }, [])
+
+  const isDisabled = useMemo(() => disabled || loading, [disabled, loading])
+  const isEmpty = useMemo(() => !message.trim(), [message])
 
   return (
     <div className="flex items-end space-x-2 p-4 border-t border-gray-200 bg-white">
       <div className="flex-1">
         <TextArea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isDisabled}
@@ -71,3 +75,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     </div>
   )
 }
+
+// Memoize MessageInput component to prevent unnecessary re-renders
+export const MessageInput = memo(MessageInputComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.onSend === nextProps.onSend
+  )
+})

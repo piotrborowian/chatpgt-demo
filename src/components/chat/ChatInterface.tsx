@@ -22,7 +22,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(
     conversationId || null
   )
-  const messageOrderRef = useRef(0)
+  
+  // Refs for proper race condition and memory leak prevention
+  const isMountedRef = useRef(true)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const currentRequestIdRef = useRef<number>(0)
 
   // Load messages for conversation if conversationId is provided
   useEffect(() => {
@@ -33,14 +37,29 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [conversationId])
 
-  // Sync message order counter with current messages
+  // Cleanup on unmount
   useEffect(() => {
-    messageOrderRef.current = messages.length
-  }, [messages.length])
+    return () => {
+      isMountedRef.current = false
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   const handleSendMessage = useCallback(async (content: string) => {
     // Prevent multiple simultaneous sends
     if (loading) return
+
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    const requestId = ++currentRequestIdRef.current
 
     try {
       setLoading(true)
@@ -50,9 +69,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       
       // Validate sanitized content
       if (!sanitizedContent.trim()) {
-        setLoading(false)
+        if (isMountedRef.current) {
+          setLoading(false)
+        }
         return
       }
+
+      // Check if request was aborted
+      if (abortController.signal.aborted) return
 
       // Create conversation if this is the first message
       let convId = currentConversationId
@@ -60,67 +84,96 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const newConversation = await createConversation({
           title: sanitizedContent.slice(0, 50) + (sanitizedContent.length > 50 ? '...' : '')
         })
+        
+        if (abortController.signal.aborted || !isMountedRef.current) return
+        
         convId = newConversation.id
         setCurrentConversationId(convId)
         onConversationCreate?.(newConversation)
       }
 
-      // Use atomic counter for message ordering to prevent race conditions
-      const userOrder = ++messageOrderRef.current
+      // Generate unique message IDs and atomic ordering
+      const timestamp = Date.now()
+      const userMessageId = `user-${requestId}-${timestamp}`
+      
       const userMessage: MessageType = {
-        id: `temp-${Date.now()}`, // Temporary ID
+        id: userMessageId,
         conversation_id: convId,
         role: 'user',
         content: sanitizedContent,
         created_at: new Date().toISOString(),
-        message_order: userOrder,
+        message_order: timestamp, // Use timestamp for unique ordering
       }
 
-      // Atomic state update
-      setMessages(prev => [...prev, userMessage])
+      // Atomic state update - only if component is still mounted and request not aborted
+      if (isMountedRef.current && !abortController.signal.aborted) {
+        setMessages(prev => [...prev, userMessage])
+      }
 
       // Save user message to database
-      await createMessage({
-        conversation_id: convId,
-        role: 'user',
-        content: sanitizedContent,
-        message_order: userMessage.message_order,
-      })
+      if (!abortController.signal.aborted) {
+        await createMessage({
+          conversation_id: convId,
+          role: 'user',
+          content: sanitizedContent,
+          message_order: userMessage.message_order,
+        })
+      }
 
-      // Simulate AI response (TODO: Replace with actual OpenAI API call)
-      setTimeout(async () => {
+      // Simulate AI response with proper cancellation handling
+      const timeoutId = setTimeout(async () => {
         try {
-          // Use atomic counter for assistant message ordering
-          const assistantOrder = ++messageOrderRef.current
+          // Check if this is still the current request
+          if (abortController.signal.aborted || !isMountedRef.current || currentRequestIdRef.current !== requestId) {
+            return
+          }
+
+          const assistantTimestamp = Date.now()
           const assistantMessage: MessageType = {
-            id: `temp-${Date.now()}-assistant`,
+            id: `assistant-${requestId}-${assistantTimestamp}`,
             conversation_id: convId!,
             role: 'assistant',
             content: `I received your message: "${sanitizedContent}". This is a placeholder response until OpenAI integration is complete.`,
             created_at: new Date().toISOString(),
-            message_order: assistantOrder,
+            message_order: assistantTimestamp,
           }
           
-          // Atomic state update
-          setMessages(prev => [...prev, assistantMessage])
-          
-          // Save assistant message to database
-          await createMessage({
-            conversation_id: convId!,
-            role: 'assistant',
-            content: assistantMessage.content,
-            message_order: assistantMessage.message_order,
-          })
+          // Only update state if still mounted and not aborted
+          if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
+            setMessages(prev => [...prev, assistantMessage])
+            
+            // Save assistant message to database
+            await createMessage({
+              conversation_id: convId!,
+              role: 'assistant',
+              content: assistantMessage.content,
+              message_order: assistantMessage.message_order,
+            })
+          }
         } catch (error) {
-          console.error('Error creating assistant message:', error)
+          if (isMountedRef.current && !abortController.signal.aborted) {
+            console.error('Error creating assistant message:', error)
+          }
         } finally {
-          setLoading(false)
+          if (isMountedRef.current && !abortController.signal.aborted && currentRequestIdRef.current === requestId) {
+            setLoading(false)
+          }
         }
       }, 1000)
 
+      // Register timeout for cleanup
+      abortController.signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId)
+        if (isMountedRef.current) {
+          setLoading(false)
+        }
+      })
+
     } catch (error) {
-      console.error('Error sending message:', error)
-      setLoading(false)
+      if (isMountedRef.current && !abortController.signal.aborted) {
+        console.error('Error sending message:', error)
+        setLoading(false)
+      }
     }
   }, [loading, currentConversationId, onConversationCreate])
 

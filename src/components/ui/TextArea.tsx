@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 const textAreaVariants = cva(
@@ -27,32 +27,91 @@ export interface TextAreaProps
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ className, resize, autoResize = false, ...props }, ref) => {
     const internalRef = useRef<HTMLTextAreaElement>(null)
-    const textareaRef = ref || internalRef
+    const isMountedRef = useRef<boolean>(true)
+    const adjustHeightRef = useRef<(() => void) | null>(null)
+    
+    // Use the passed ref or internal ref
+    const textareaRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef
+
+    // Memoized adjust height function to prevent recreation
+    const createAdjustHeight = useCallback((textarea: HTMLTextAreaElement) => {
+      return () => {
+        // Triple check: component mounted, textarea exists, and has required properties
+        if (
+          isMountedRef.current && 
+          textarea && 
+          textarea.style && 
+          typeof textarea.scrollHeight === 'number' &&
+          textarea.parentNode // Ensure textarea is still in DOM
+        ) {
+          try {
+            textarea.style.height = 'auto'
+            textarea.style.height = `${textarea.scrollHeight}px`
+          } catch (error) {
+            // Silently handle any DOM manipulation errors
+            console.warn('TextArea height adjustment failed:', error)
+          }
+        }
+      }
+    }, [])
 
     useEffect(() => {
-      if (!autoResize || typeof textareaRef !== 'object' || !textareaRef?.current) {
+      // Set mounted state
+      isMountedRef.current = true
+      
+      // Early return if auto-resize is disabled
+      if (!autoResize) {
         return
       }
 
-      const textarea = textareaRef.current
-      const adjustHeight = () => {
-        // Check if textarea is still valid before accessing properties
-        if (textarea && textarea.style && textarea.scrollHeight !== undefined) {
-          textarea.style.height = 'auto'
-          textarea.style.height = `${textarea.scrollHeight}px`
+      // Get textarea element with proper type checking
+      const getTextarea = (): HTMLTextAreaElement | null => {
+        if (textareaRef && 'current' in textareaRef) {
+          return textareaRef.current
         }
+        return null
       }
+
+      const textarea = getTextarea()
+      if (!textarea) {
+        return
+      }
+
+      // Create the adjust height function and store reference
+      const adjustHeight = createAdjustHeight(textarea)
+      adjustHeightRef.current = adjustHeight
       
-      textarea.addEventListener('input', adjustHeight)
-      adjustHeight() // Initial adjustment
+      // Add event listener with passive option for better performance
+      textarea.addEventListener('input', adjustHeight, { passive: true })
       
+      // Initial height adjustment
+      adjustHeight()
+      
+      // Cleanup function
       return () => {
-        // Ensure textarea is still valid before removing event listener
-        if (textarea && textarea.removeEventListener) {
-          textarea.removeEventListener('input', adjustHeight)
+        isMountedRef.current = false
+        
+        // Remove event listener with the same function reference
+        if (textarea && adjustHeightRef.current) {
+          try {
+            textarea.removeEventListener('input', adjustHeightRef.current)
+          } catch (error) {
+            // Handle case where textarea is already removed from DOM
+            console.warn('TextArea event listener cleanup failed:', error)
+          }
         }
+        
+        // Clear function reference
+        adjustHeightRef.current = null
       }
-    }, [autoResize, textareaRef])
+    }, [autoResize, createAdjustHeight, textareaRef])
+
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => {
+        isMountedRef.current = false
+      }
+    }, [])
 
     const style = autoResize ? { overflowY: 'hidden' as const } : {}
 
