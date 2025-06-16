@@ -8,10 +8,16 @@ export class DatabaseError extends Error {
   }
 }
 
-function handleDatabaseError(error: any): never {
-  const message = error?.message || 'Unknown database error'
-  const code = error?.code
-  const details = error?.details
+function handleDatabaseError(error: unknown): never {
+  const message = error && typeof error === 'object' && 'message' in error 
+    ? String(error.message) 
+    : 'Unknown database error'
+  const code = error && typeof error === 'object' && 'code' in error 
+    ? String(error.code) 
+    : undefined
+  const details = error && typeof error === 'object' && 'details' in error 
+    ? String(error.details) 
+    : undefined
   
   console.error('Database error:', { message, code, details })
   throw new DatabaseError(message, code, details)

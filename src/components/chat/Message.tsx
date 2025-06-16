@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { Message as MessageType } from '@/types/database'
+import { escapeHtml } from '@/lib/sanitize'
 
 interface MessageProps {
   message: MessageType
   showTimestamp?: boolean
 }
 
-export const Message: React.FC<MessageProps> = ({ message, showTimestamp = false }) => {
+const MessageComponent: React.FC<MessageProps> = ({ message, showTimestamp = false }) => {
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
 
@@ -33,9 +34,10 @@ export const Message: React.FC<MessageProps> = ({ message, showTimestamp = false
         </div>
         
         {/* Message content */}
-        <div className="text-sm whitespace-pre-wrap">
-          {message.content}
-        </div>
+        <div 
+          className="text-sm whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: escapeHtml(message.content) }}
+        />
         
         {/* Timestamp */}
         {showTimestamp && (
@@ -49,3 +51,15 @@ export const Message: React.FC<MessageProps> = ({ message, showTimestamp = false
     </div>
   )
 }
+
+// Memoize Message component to prevent unnecessary re-renders
+export const Message = memo(MessageComponent, (prevProps, nextProps) => {
+  // Only re-render if message content, timestamp visibility, or message ID changes
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.role === nextProps.message.role &&
+    prevProps.message.created_at === nextProps.message.created_at &&
+    prevProps.showTimestamp === nextProps.showTimestamp
+  )
+})

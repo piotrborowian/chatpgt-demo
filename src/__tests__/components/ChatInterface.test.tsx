@@ -6,8 +6,8 @@ const mockCreateMessage = jest.fn()
 const mockCreateConversation = jest.fn()
 
 jest.mock('@/lib/database', () => ({
-  createMessage: (...args: any[]) => mockCreateMessage(...args),
-  createConversation: (...args: any[]) => mockCreateConversation(...args),
+  createMessage: (params: import('@/types/database').CreateMessageParams) => mockCreateMessage(params),
+  createConversation: (params?: import('@/types/database').CreateConversationParams) => mockCreateConversation(params),
 }))
 
 describe('ChatInterface', () => {

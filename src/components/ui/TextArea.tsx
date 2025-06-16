@@ -30,17 +30,27 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     const textareaRef = ref || internalRef
 
     useEffect(() => {
-      if (autoResize && typeof textareaRef === 'object' && textareaRef?.current) {
-        const textarea = textareaRef.current
-        const adjustHeight = () => {
+      if (!autoResize || typeof textareaRef !== 'object' || !textareaRef?.current) {
+        return
+      }
+
+      const textarea = textareaRef.current
+      const adjustHeight = () => {
+        // Check if textarea is still valid before accessing properties
+        if (textarea && textarea.style && textarea.scrollHeight !== undefined) {
           textarea.style.height = 'auto'
           textarea.style.height = `${textarea.scrollHeight}px`
         }
-        
-        textarea.addEventListener('input', adjustHeight)
-        adjustHeight() // Initial adjustment
-        
-        return () => textarea.removeEventListener('input', adjustHeight)
+      }
+      
+      textarea.addEventListener('input', adjustHeight)
+      adjustHeight() // Initial adjustment
+      
+      return () => {
+        // Ensure textarea is still valid before removing event listener
+        if (textarea && textarea.removeEventListener) {
+          textarea.removeEventListener('input', adjustHeight)
+        }
       }
     }, [autoResize, textareaRef])
 

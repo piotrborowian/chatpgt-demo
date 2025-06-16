@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import { MessageList } from './MessageList'
 import { MessageInput } from './MessageInput'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { Message as MessageType, Conversation } from '@/types/database'
 import { createMessage, createConversation } from '@/lib/database'
+import { sanitizeUserInput } from '@/lib/sanitize'
 
 interface ChatInterfaceProps {
   conversationId?: string
@@ -34,57 +36,76 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     try {
       setLoading(true)
 
+      // Sanitize user input to prevent XSS and other attacks
+      const sanitizedContent = sanitizeUserInput(content)
+      
+      // Validate sanitized content
+      if (!sanitizedContent.trim()) {
+        setLoading(false)
+        return
+      }
+
       // Create conversation if this is the first message
       let convId = currentConversationId
       if (!convId) {
         const newConversation = await createConversation({
-          title: content.slice(0, 50) + (content.length > 50 ? '...' : '')
+          title: sanitizedContent.slice(0, 50) + (sanitizedContent.length > 50 ? '...' : '')
         })
         convId = newConversation.id
         setCurrentConversationId(convId)
         onConversationCreate?.(newConversation)
       }
 
-      // Add user message
-      const userMessage: MessageType = {
-        id: `temp-${Date.now()}`, // Temporary ID
-        conversation_id: convId,
-        role: 'user',
-        content,
-        created_at: new Date().toISOString(),
-        message_order: messages.length + 1,
-      }
-
-      setMessages(prev => [...prev, userMessage])
+      // Add user message with functional state update to prevent race conditions
+      let userMessage: MessageType | undefined
+      setMessages(prev => {
+        const nextOrder = prev.length + 1
+        userMessage = {
+          id: `temp-${Date.now()}`, // Temporary ID
+          conversation_id: convId,
+          role: 'user',
+          content: sanitizedContent,
+          created_at: new Date().toISOString(),
+          message_order: nextOrder,
+        }
+        return [...prev, userMessage]
+      })
 
       // Save user message to database
-      await createMessage({
-        conversation_id: convId,
-        role: 'user',
-        content,
-        message_order: messages.length + 1,
-      })
+      if (userMessage) {
+        await createMessage({
+          conversation_id: convId,
+          role: 'user',
+          content: sanitizedContent,
+          message_order: userMessage.message_order,
+        })
+      }
 
       // Simulate AI response (TODO: Replace with actual OpenAI API call)
       setTimeout(async () => {
-        const assistantMessage: MessageType = {
-          id: `temp-${Date.now()}-assistant`,
-          conversation_id: convId!,
-          role: 'assistant',
-          content: `I received your message: "${content}". This is a placeholder response until OpenAI integration is complete.`,
-          created_at: new Date().toISOString(),
-          message_order: messages.length + 2,
-        }
-
-        setMessages(prev => [...prev, assistantMessage])
+        let assistantMessage: MessageType | undefined
+        setMessages(prev => {
+          const nextOrder = prev.length + 1
+          assistantMessage = {
+            id: `temp-${Date.now()}-assistant`,
+            conversation_id: convId!,
+            role: 'assistant',
+            content: `I received your message: "${sanitizedContent}". This is a placeholder response until OpenAI integration is complete.`,
+            created_at: new Date().toISOString(),
+            message_order: nextOrder,
+          }
+          return [...prev, assistantMessage]
+        })
         
         // Save assistant message to database
-        await createMessage({
-          conversation_id: convId!,
-          role: 'assistant',
-          content: assistantMessage.content,
-          message_order: messages.length + 2,
-        })
+        if (assistantMessage) {
+          await createMessage({
+            conversation_id: convId!,
+            role: 'assistant',
+            content: assistantMessage.content,
+            message_order: assistantMessage.message_order,
+          })
+        }
 
         setLoading(false)
       }, 1000)
@@ -108,21 +129,42 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Messages */}
-      <MessageList
-        messages={messages}
-        loading={loading}
-        showTimestamps={false}
-        autoScroll={true}
-      />
+      <ErrorBoundary
+        fallback={
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center text-gray-500">
+              <p className="text-lg font-medium mb-2">Chat messages unavailable</p>
+              <p className="text-sm">There was an error loading the message history.</p>
+            </div>
+          </div>
+        }
+      >
+        <MessageList
+          messages={messages}
+          loading={loading}
+          showTimestamps={false}
+          autoScroll={true}
+        />
+      </ErrorBoundary>
 
       {/* Input */}
-      <div className="flex-none">
-        <MessageInput
-          onSend={handleSendMessage}
-          disabled={loading}
-          loading={loading}
-        />
-      </div>
+      <ErrorBoundary
+        fallback={
+          <div className="flex-none p-4 border-t border-gray-200 bg-red-50">
+            <div className="text-center text-red-600">
+              <p className="text-sm">Message input is temporarily unavailable</p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex-none">
+          <MessageInput
+            onSend={handleSendMessage}
+            disabled={loading}
+            loading={loading}
+          />
+        </div>
+      </ErrorBoundary>
     </div>
   )
 }
