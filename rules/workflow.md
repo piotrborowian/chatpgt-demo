@@ -1,15 +1,15 @@
 # Agent Development Workflow (Claude Code + Cursor)
 
-> **Purpose**  Repeatable, *research‑first* workflow for autonomous coding sessions run with Claude Code CLI or Cursor Agent Mode.
+> **Purpose**  Repeatable, *research‑firs, test drivent* workflow for autonomous coding sessions run with Claude Code CLI or Cursor Agent Mode.
 > Reference from `CLAUDE.md` and `.cursor/rules`.
 
-> **⚠️ CRITICAL: NO FEATURE/ISSUE IS COMPLETE WITHOUT ALL 7 WORKFLOW STAGES (2.1-2.7)**
+> **⚠️ CRITICAL: NO FEATURE IS COMPLETE WITHOUT COMPLETING ALL 7 WORKFLOW STAGES (2.1-2.7)**
 
 ---
 
 ## 0 Key Ideas at a Glance
 * **Adaptive Research Depth** – Self‑score familiarity; if unfamiliar, run a time‑boxed *spike* / PoC first.
-* **Loop‑Closing Tests** – Design tests that the agent can re‑run until behaviour matches spec (unit, visual, E2E).
+* **Loop‑Closing Tests** – We follow Test Driven Development. Design tests that the agent can re‑run until behaviour matches spec (unit, visual, E2E).
 * **TDD Iteration** – RED → GREEN → REFACTOR ensures incremental correctness.
 * **Persistent Knowledge** – Decisions go into GitHub Issues, docs & rules; future agents inherit context.
 * **Human Gates** – Stop after research plan & after validation for explicit user approval.
@@ -29,8 +29,8 @@
 ## 1.1 Workflow Summary
 1. **2.1 Session Boot** - Branch & setup session log
 2. **2.2 Research + Planning** - Research, plan, design tests → **IMPORTANT!!! STOP - Get User Approval**  
-3. **2.3 Test Design** - Create loop-closing tests
-4. **2.4 Implementation** - TDD iteration (RED → GREEN → REFACTOR)
+3. **2.3 Test Design and Implementation** - Create loop-closing tests  **IMPORTANT!!! Create tests before starting feature implementation!**
+4. **2.4 Feature Implementation** - TDD iteration (RED → GREEN → REFACTOR)
 5. **2.5 Validation** - Run CI, QA tests, present evidence → **IMPORTANT!!! STOP - Get User Approval**
 6. **2.6 Documentation & PR** - Create issue, commit, open PR
 7. **2.7 Close Session** - Update plan, archive session
@@ -66,7 +66,7 @@ git branch --set-upstream-to=origin/develop develop
 | **Test Blueprint** | Design *loop‑closing* tests (see §2.3). |
 | **User Approval** | Present plan + risks + test list; wait for explicit **OK**. |
 
-### 2.3 Test Design — Closing the Loop
+### 2.3 Test Design and Implementation — Closing the Loop
 > *“Tests are the feedback channel that lets the agent iterate safely”*.
 
 | Target | Test Type | Loop Mechanism | Tooling Example |
@@ -143,6 +143,7 @@ repeat ↻
 | Coding before research | Highest hallucination risk  |
 | Mocks replacing critical integrations | Masks real‑world failures  |
 | Changing tests to pass | Undermines TDD fundamentals  |
+| Stating implementation before tests are complete| Undermines TDD fundamentals |
 
 ---
 
